@@ -31,6 +31,8 @@ write_vo <- function(lims=.1  #factor ton extend bound beyond slab lims
   #   write.csv(slab$vo, file= paste0("data/",slab$name,"2.csv"))
   # }
 
+
+
   as.slab <- function(slab.name) {
     (assemble_slab(slab.name=slab.name, extend.lims = c(-1, 1, -1, 1)*lims, terrain=F,coasts = F,rivers=F,
                    borders = F,cmt=F, ehb=F, hf=F, wsm=F, plates=F))$vo %>%
