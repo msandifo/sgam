@@ -4,7 +4,17 @@
 #--------
 # filter functions
 
-get_geproc_ages <- function(dt) dt[!is.na(dt$age),]$age %>% unique()
+#' Title
+#'
+#' @param dt
+#'
+#' @return
+#' @export
+#'
+#' @examples
+get_geproc_ages <- function(dt) {
+  dt[!is.na(dt$age),]$age %>% unique()
+}
 
 #'  filter geoproc by age
 #'
@@ -42,19 +52,19 @@ filter_geoproc_ages<- function( df, myr=2.5, age.list = c("PREHISTORIC","HISTORI
 merge_geoproc_vo <- function(df, v, sub=T) {
   if (sub==T) df <-  sub_geoproc_lim(df,v)
   df$dis<- NA
-  df$v.name<-NA
-  df$v.depth<-NA
-  df$v.strike<-NA
-  df$v.dip<-NA
+  df$volcano.name<-NA
+  df$v.slab.depth<-NA
+  df$v.slab.strike<-NA
+  df$v.slab.dip<-NA
   for (i in 1:((dim(df)[1]))){
     dis <-raster::pointDistance(c(df$lon[i], df$lat[i]), v[, c("long","lat")], lonlat=TRUE)/1000
-    # print(min(dis))
+    #print(i)
     ind <- which.min(dis)
     df$dis[i] <- min(dis)
-    df$v.name[i]= v$volcano.name[ind]
-    df$v.slab.depth[i]= v$slab.depth[ind]
-    df$v.slab.dip[i]= v$slab.dip[ind]
-    df$v.slab.strike[i]= v$slab.strike[ind]
+    df$volcano.name[i]= v$volcano.name[ind]
+    df$slab.depth[i]= v$slab.depth[ind]
+    df$slab.dip[i]= v$slab.dip[ind]
+    df$slab.strike[i]= v$slab.strike[ind]
   }
   df
 }
@@ -74,8 +84,23 @@ sub_geoproc_lim <- function(df, v) {
   df %>% subset(lon >=lims[1] & lon<=lims[2]  & lat>=lims[3] & lat<=lims[4])
 }
 
-read_vo <-function(fn ="data/sam2.csv") read.csv(fn)
-
+#' Title
+#'
+#' @param fn
+#' @param slabs  list of slabs to subset default NULL
+#'
+#' @return
+#' @export
+#'
+#' @examples
+read_vo <- function(file ="data/vo_slab2.csv", slabs=NULL){
+  vo<- data.table::fread(file)
+  if (!is.null(slabs)) {
+    if (slabs %in% vo$slab) vo <- vo %>% subset(slab %in% slabs) else
+      message(slab, "not in volcano slab list" )
+  }
+  vo
+}
 
 #' the subset of the geoproc data set (df) within a given radius (rad) of a specified location (loc)
 #'
@@ -89,9 +114,9 @@ read_vo <-function(fn ="data/sam2.csv") read.csv(fn)
 #' @examples
 get_geoproc_loc <- function(df, loc, rad=5) {
 
-    df$loc.dis <-raster::pointDistance(loc, df[, c("lon", "lat")], lonlat=TRUE)/1000
-   # print(df$loc.dis)
-    df %>% subset(loc.dis<=rad)
+  df$loc.dis <-raster::pointDistance(loc, df[, c("lon", "lat")], lonlat=TRUE)/1000
+  #print(df$loc.dis)
+  df %>% subset(loc.dis<=rad)
 
 }
 
@@ -131,7 +156,7 @@ get_v_loc <- function(volcano="Sumaco", v=read_vo()) {
 
   volcano <- v$volcano.name[str_detect(v$volcano.name,volcano)]
 
- c( v$long[v$volcano.name==volcano], v$lat[v$volcano.name==volcano])
+  c( v$long[v$volcano.name==volcano], v$lat[v$volcano.name==volcano])
 
 }
 
@@ -146,12 +171,30 @@ get_v_loc <- function(volcano="Sumaco", v=read_vo()) {
 #' @export
 #'
 #' @examples
-get_v_group <- function(  df,  volcanoes= c("Sumaco", "Revent", "Hudson"),rad=6){
+get_v_group <- function(  df,  volcanoes= c("Sumaco", "Revent", "Hudson"),rad=6, ver=F){
 
- gpl <- function(volcano){
-   get_geoproc_loc(df, get_v_loc( volcano ), rad=rad) %>% as.data.frame() %>%dplyr::mutate(location=get_v_name(volcano))
- }
- purrr::map_df(volcanoes, gpl)
+  #note still to deal
+  gpl <- function(volcano, ver=ver){
+
+    # print(get_v_loc(volcano))
+    if (length(get_v_name( volcano ))==1) {
+      get_geoproc_loc(df, get_v_loc( volcano ) , rad=rad) %>%
+        dplyr::mutate(volcano=get_v_name(volcano) )
+
+    }else
+      if (length(get_v_name( volcano ))>1){
+        get_geoproc_loc(df, get_v_loc( volcano )[c(1,3)], rad=rad) %>%
+          dplyr::mutate(volcano=get_v_name(volcano)[1] )
+        get_geoproc_loc(df, get_v_loc( volcano )[c(2,4)], rad=rad) %>%
+          dplyr::mutate(volcano=get_v_name(volcano)[2] )
+      }
+
+
+
+
+
+  }
+  purrr::map_df(volcanoes, gpl)
 }
 
 
